@@ -1,0 +1,84 @@
+# Base44 sandbox/dev stack for the Minecraft Hub web app.
+#
+# Everything runs from the cloned source that is bind-mounted into the containers:
+#   web      -> Apache + PHP 8.2 serving public/ on host port 3000 (the preview port)
+#   db       -> MySQL 8 (application data)
+#   db-init  -> one-shot schema + demo seed, runs before the web service starts
+#
+# Secrets the app owner supplies live in /run/base44/app.env (outside the repo).
+# `.env.base44-defaults` holds non-secret local defaults and is listed FIRST so the
+# platform's values always win.
+name: minecraft-hub
+
+services:
+  db:
+    image: mysql:8.0
+    restart: on-failure
+    environment:
+      MYSQL_ROOT_PASSWORD: hub_root_pw
+      MYSQL_DATABASE: mc_hub
+      MYSQL_USER: mc
+      MYSQL_PASSWORD: mc_hub_pw
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -umc -pmc_hub_pw --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  db-init:
+    build: .
+    restart: "no"
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: mc_hub
+      DB_USER: mc
+      DB_PASS: mc_hub_pw
+      BASE44_PREVIEW_MODE: ${BASE44_PREVIEW_MODE:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["php", "/var/www/html/app/migrate.php"]
+
+  web:
+    build: .
+    restart: on-failure
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    # The bind-mounted repo is only readable by root, and Apache drops to www-data.
+    # Make the mounted source traversable before starting the server (directories get
+    # +x so www-data can walk into them; file modes are otherwise left alone).
+    command: ["sh", "-ec", "chmod -R a+rX /var/www/html && exec apache2-foreground"]
+    ports:
+      - "3000:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: mc_hub
+      DB_USER: mc
+      DB_PASS: mc_hub_pw
+      # Provided by the platform: "1" inside the sandbox preview, unset elsewhere.
+      BASE44_PREVIEW_MODE: ${BASE44_PREVIEW_MODE:-}
+    env_file:
+      - ./.env.base44-defaults
+      - /run/base44/app.env
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      # Renders the home page: proves Apache/PHP answer AND that MySQL is reachable.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+volumes:
+  db_data:

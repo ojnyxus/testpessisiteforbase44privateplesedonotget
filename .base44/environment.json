@@ -1,0 +1,7 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "notes": "PHP 8.2 + Apache serves the app from public/ on port 3000; MySQL 8 holds the data. The db-init service creates the schema and seeds the demo catalogue before the web service starts. Crypto payments are self-hosted: the owner's wallet addresses and USD rates live in the settings table and are edited in Admin -> Settings, so no third-party payment credentials are required.",
+  "secrets": []
+}
