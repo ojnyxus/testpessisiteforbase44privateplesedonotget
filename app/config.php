@@ -18,6 +18,12 @@ return [
     // sandbox preview. Anything else (unset, "0", "") keeps stock behaviour.
     'preview_mode' => env_value('BASE44_PREVIEW_MODE') === '1',
 
+    // Download sources. Modrinth is an open API; CurseForge needs an API key,
+    // delivered by the platform to /run/base44/app.env. With no key the
+    // CurseForge half of the admin screen simply reports that it is unavailable.
+    'modrinth_agent' => env_value('MODRINTH_USER_AGENT', 'BlockForge-Hub/1.0 (self-hosted Minecraft directory)'),
+    'curseforge_key' => env_value('CURSEFORGE_API_KEY', ''),
+
     'db' => [
         'host' => env_value('DB_HOST', 'db'),
         'port' => env_value('DB_PORT', '3306'),

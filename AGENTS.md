@@ -52,10 +52,23 @@ Routing has no `.htaccess` — the image sets `FallbackResource /index.php`, so 
 * **Catalogue preview art is generated.** `public/thumb.php` draws a deterministic isometric
   scene from each slug (kind chosen by category), so the repo ships no binary images. Real
   screenshots can replace it by pointing cards at image files.
-* **Downloads are placeholders.** `downloads` rows and the per-asset counter are recorded on
-  `/download/{id}`. With no `assets.download_url` set, the response is a generated text package;
-  set a real URL in the database/admin to hand out the actual file. Premium items redirect to
-  login/asset page unless the buyer has a confirmed unlock.
+* **Downloads serve real files when the item is linked.** `downloads` rows and the per-asset
+  counter are recorded on `/download/{id}`, which then, in order: resolves the item's Modrinth /
+  CurseForge link, redirects to `assets.download_url`, or (with neither set) hands out a generated
+  text package. Premium items redirect to login/asset page unless the buyer has a confirmed unlock.
+* **Modrinth + CurseForge links** live in `app/sources.php` and are managed in
+  `Admin -> Download sources` (`/admin/sources`, the plain list, plus `?asset={id}` for the
+  search/picker screen). The project link is stored on the asset (`source`, `source_project_id`,
+  `source_project_slug|_name`), together with the file the hub last resolved
+  (`source_file_id|_version_label|_file_name|_file_url|_checked_at`); `source_version_id` is an
+  optional admin pin. An unpinned link follows the newest file that matches the asset's
+  `mc_version` (plus a loader hinted at by the category), degrading to the newest file overall, so
+  a link never goes dead. Modrinth is an open API (no credentials, CDN links cached 6h);
+  CurseForge needs `CURSEFORGE_API_KEY` and hands out short-lived signed links, so those are
+  re-resolved on every download. Items that exist on Modrinth for real are seeded already linked
+  (`demo_sources()` in `app/schema.php`), so a fresh catalogue downloads actual jars out of the box.
+  Outbound HTTP uses `file_get_contents` with a stream context — no PHP curl extension, but
+  `allow_url_fopen` must stay on.
 * **Money-critical rules** live in `app/pages/pay_create.php` (who may open an invoice) and
   `app/pages/pay_review.php` (admin-only confirmation). CSRF is required on every POST via
   `csrf_field()` / `X-CSRF-Token`.
@@ -71,10 +84,26 @@ Routing has no `.htaccess` — the image sets `FallbackResource /index.php`, so 
   and on a real domain without any host configuration.
 * No host/origin allowlist needed: Apache does not gate on `Host`, and there is no separate
   frontend origin or CORS layer (single origin, server-rendered pages).
+* `MODRINTH_USER_AGENT` is a non-secret default in `.env.base44-defaults` (Modrinth only asks API
+  clients to identify themselves). `CURSEFORGE_API_KEY` is a real secret: it comes from the
+  platform at `/run/base44/app.env`, and without it the CurseForge tab of `/admin/sources` says so
+  instead of searching — the app boots and Modrinth keeps working either way.
 
 ## Checks
 
 ```bash
 docker compose -f docker-compose.base44.yml exec web sh -c 'find /var/www/html/app /var/www/html/public -name "*.php" -exec php -l {} \;'
 docker compose -f docker-compose.base44.yml logs --tail=40 db-init web
+
+# Download-source resolution without needing a browser or an admin login:
+docker compose -f docker-compose.base44.yml exec web php -r \
+  'require "/var/www/html/app/bootstrap.php";
+   $a = asset_by_slug("sodium-lithium-boost");
+   var_dump(source_resolve($a, true));'
+
+# The download endpoint must 302 to the platform CDN, not stream the placeholder text:
+curl -sI http://localhost:3000/download/7 | grep -i '^location'
 ```
+
+`/admin/sources` is behind the admin login (the first registered account owns the hub), so the
+`php -r` above is the quickest way to check a link without signing in.

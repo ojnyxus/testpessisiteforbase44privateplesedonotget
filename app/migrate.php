@@ -16,11 +16,38 @@ function migrate_say(string $message): void
     fwrite(STDOUT, $message . PHP_EOL);
 }
 
+/**
+ * Adds columns an older database is missing (MySQL 8 has no
+ * "ADD COLUMN IF NOT EXISTS", so we check information_schema first).
+ */
+function ensure_columns(string $table, array $columns): void
+{
+    $existing = array_column(
+        db_all(
+            'SELECT COLUMN_NAME FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+            [$table]
+        ),
+        'COLUMN_NAME'
+    );
+
+    foreach ($columns as $name => $definition) {
+        if (in_array($name, $existing, true)) {
+            continue;
+        }
+        db_run('ALTER TABLE `' . $table . '` ADD COLUMN `' . $name . '` ' . $definition);
+        migrate_say("column added: {$table}.{$name}");
+    }
+}
+
 try {
     foreach (schema_statements() as $name => $sql) {
         db_run($sql);
         migrate_say("schema ok: {$name}");
     }
+
+    // Links to real files on Modrinth / CurseForge (see app/sources.php).
+    ensure_columns('assets', asset_source_columns());
 
     $existing = (int)db_value('SELECT COUNT(*) FROM settings');
     $inserted = 0;
@@ -37,9 +64,11 @@ try {
         foreach (demo_assets() as $asset) {
             db_run(
                 'INSERT INTO assets (slug, name, author, section, category, mc_version, summary, description, includes,
-                                     impact, is_premium, price_usd, download_url, file_name, downloads, rating, created_at)
+                                     impact, is_premium, price_usd, download_url, file_name, downloads, rating, created_at,
+                                     `source`, source_project_id, source_project_slug, source_project_name)
                  VALUES (:slug, :name, :author, :section, :category, :mc_version, :summary, :description, :includes,
-                         :impact, :is_premium, :price_usd, :download_url, :file_name, :downloads, :rating, :created_at)',
+                         :impact, :is_premium, :price_usd, :download_url, :file_name, :downloads, :rating, :created_at,
+                         :source, :source_project_id, :source_project_slug, :source_project_name)',
                 $asset
             );
             $count++;

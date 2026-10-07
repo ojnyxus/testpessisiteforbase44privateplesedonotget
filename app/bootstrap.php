@@ -36,6 +36,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/payments.php';
 require_once __DIR__ . '/queries.php';
+require_once __DIR__ . '/sources.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/views/partials.php';
 

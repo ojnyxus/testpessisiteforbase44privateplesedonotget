@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+
+/** $bound: the Modrinth / CurseForge project this item downloads from, when linked. */
+$bound = asset_source($asset);
 ?>
 <div class="wrap">
     <div class="breadcrumb">
@@ -21,6 +24,9 @@ declare(strict_types=1);
                         <span class="chip chip-ghost">Minecraft <?= e($asset['mc_version']) ?></span>
                         <span class="badge badge-impact impact-<?= e($asset['impact']) ?>"><?= e(impact_label($asset['impact'])) ?></span>
                         <?php if ($premium): ?><span class="badge badge-gold">Premium</span><?php endif; ?>
+                        <?php if ($bound !== null): ?>
+                            <span class="chip chip-ghost"><?= e(source_label($bound['source'])) ?> files</span>
+                        <?php endif; ?>
                     </div>
                     <h1 style="font-size:clamp(1.8rem,3.4vw,2.4rem)"><?= e($asset['name']) ?></h1>
                     <p class="muted">by <?= e($asset['author']) ?> · added <?= e(time_ago($asset['created_at'])) ?></p>
@@ -107,10 +113,24 @@ declare(strict_types=1);
                     <div class="fact"><span>Category</span><strong><?= e(category_label($asset['category'])) ?></strong></div>
                     <div class="fact"><span>Impact</span><strong><?= e(impact_label($asset['impact'])) ?></strong></div>
                     <div class="fact"><span>Author</span><strong><?= e($asset['author']) ?></strong></div>
+                    <?php if ($bound !== null): ?>
+                        <div class="fact"><span>Files</span><strong><?= e(source_label($bound['source'])) ?></strong></div>
+                    <?php endif; ?>
                 </div>
-                <p class="muted small" style="margin:1rem 0 0">
-                    Demo catalogue: files are placeholders until a creator attaches a real download URL from the admin panel.
-                </p>
+                <?php if ($bound !== null): ?>
+                    <p class="muted small" style="margin:1rem 0 0">
+                        The download is served live from
+                        <?= e($bound['project_name'] !== '' ? $bound['project_name'] : source_label($bound['source'])) ?>
+                        <?= $bound['version_id'] !== '' && $bound['version_label'] !== ''
+                            ? '(' . e($bound['version_label']) . ') — the exact file the owner pinned.'
+                            : '— always the newest release that matches this Minecraft version.' ?>
+                    </p>
+                <?php else: ?>
+                    <p class="muted small" style="margin:1rem 0 0">
+                        Demo catalogue: this item still serves a generated placeholder — the owner can link it to a
+                        real Modrinth or CurseForge project from Admin &rarr; Download sources.
+                    </p>
+                <?php endif; ?>
             </div>
         </aside>
     </div>

@@ -2,6 +2,12 @@
   "previewPort": 3000,
   "healthPath": "/",
   "startCommand": "docker compose -f docker-compose.base44.yml up -d",
-  "notes": "PHP 8.2 + Apache serves the app from public/ on port 3000; MySQL 8 holds the data. The db-init service creates the schema and seeds the demo catalogue before the web service starts. Crypto payments are self-hosted: the owner's wallet addresses and USD rates live in the settings table and are edited in Admin -> Settings, so no third-party payment credentials are required.",
-  "secrets": []
+  "notes": "PHP 8.2 + Apache serves the app from public/ on port 3000; MySQL 8 holds the data. The db-init service creates the schema (and adds any columns an older database is missing) and seeds the demo catalogue before the web service starts. Crypto payments are self-hosted: the owner's wallet addresses and USD rates live in the settings table and are edited in Admin -> Settings, so no third-party payment credentials are required. Downloads are resolved from Modrinth (open API, no credentials) or CurseForge (needs CURSEFORGE_API_KEY) links managed in Admin -> Download sources.",
+  "secrets": [
+    {
+      "name": "CURSEFORGE_API_KEY",
+      "description": "Optional. CurseForge API key from https://console.curseforge.com/ (API Keys). Only needed for the CurseForge half of Admin -> Download sources; Modrinth works without it and the app boots either way.",
+      "requiredAtBoot": false
+    }
+  ]
 }

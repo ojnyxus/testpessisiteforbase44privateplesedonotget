@@ -57,6 +57,8 @@ function schema_statements(): array
                 INDEX idx_premium (is_premium)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         SQL,
+        // The `source*` columns that link an item to Modrinth/CurseForge are added
+        // by asset_source_columns() — see the note there.
         'bookmarks' => <<<SQL
             CREATE TABLE IF NOT EXISTS bookmarks (
                 user_id INT UNSIGNED NOT NULL,
@@ -100,6 +102,48 @@ function schema_statements(): array
                 INDEX idx_asset (asset_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         SQL,
+    ];
+}
+
+/**
+ * Columns linking an asset to a real file on Modrinth or CurseForge. They are
+ * added with ALTER (see ensure_columns() in migrate.php) so an existing
+ * database picks them up on the next `up`, without a re-seed.
+ *
+ * `source_version_id` is the admin's pin (optional); `source_file_id` is the
+ * version/file the hub last resolved, so an unpinned link keeps following the
+ * newest matching release.
+ */
+function asset_source_columns(): array
+{
+    return [
+        'source'               => "VARCHAR(16) NOT NULL DEFAULT ''",
+        'source_project_id'    => 'VARCHAR(64) NULL',
+        'source_project_slug'  => 'VARCHAR(150) NULL',
+        'source_project_name'  => 'VARCHAR(150) NULL',
+        'source_version_id'    => 'VARCHAR(64) NULL',
+        'source_file_id'       => 'VARCHAR(64) NULL',
+        'source_version_label' => 'VARCHAR(64) NULL',
+        'source_file_name'     => 'VARCHAR(200) NULL',
+        'source_file_url'      => 'VARCHAR(700) NULL',
+        'source_checked_at'    => 'DATETIME NULL',
+    ];
+}
+
+/**
+ * Demo items that exist for real on Modrinth, so a freshly seeded catalogue can
+ * serve actual jars and archives. [asset slug => [project slug, project name]].
+ */
+function demo_sources(): array
+{
+    return [
+        'complementary-reimagined' => ['complementary-reimagined', 'Complementary Shaders - Reimagined'],
+        'bsl-shaders'              => ['bsl-shaders', 'BSL Shaders'],
+        'photon-shaders'           => ['photon-shader', 'Photon Shaders'],
+        'faithful-32x'             => ['faithful-32x', 'Faithful 32x'],
+        'sodium-lithium-boost'     => ['sodium', 'Sodium'],
+        'fabulously-optimized'     => ['fabulously-optimized', 'Fabulously Optimized'],
+        'distant-horizons'         => ['distanthorizons', 'Distant Horizons'],
     ];
 }
 
@@ -232,10 +276,12 @@ function demo_assets(): array
     ];
 
     $downloads = ['low' => 1200, 'medium' => 640, 'high' => 210];
+    $sources = demo_sources();
 
     foreach ($map as $section => $items) {
         foreach ($items as $index => [$name, $author, $category, $version, $impact, $premium, $price, $summary, $description, $includes]) {
             $slug = slugify($name);
+            $linked = $sources[$slug] ?? null;
             $rows[] = [
                 'slug'         => $slug,
                 'name'         => $name,
@@ -254,6 +300,11 @@ function demo_assets(): array
                 'downloads'    => $downloads[$impact] + (($index * 37) % 190),
                 'rating'       => 4.2 + (($index % 8) / 10),
                 'created_at'   => date('Y-m-d H:i:s', strtotime('-' . (3 + $index) . ' days')),
+                // Demo items that exist for real on Modrinth download the actual file.
+                'source'             => $linked !== null ? 'modrinth' : '',
+                'source_project_id'  => $linked[0] ?? null,
+                'source_project_slug' => $linked[0] ?? null,
+                'source_project_name' => $linked[1] ?? null,
             ];
         }
     }

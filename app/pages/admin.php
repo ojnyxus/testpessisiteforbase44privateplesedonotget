@@ -21,6 +21,7 @@ $pending = payments_feed(5, 'submitted');
     <p class="muted">Downloads, membership and every crypto payment that came in — confirm them below.</p>
     <div class="row-actions" style="margin-top:1rem">
         <a class="btn btn-ghost btn-sm" href="<?= url('/admin/payments') ?>"><?= icon('wallet', 15) ?> Payments</a>
+        <a class="btn btn-ghost btn-sm" href="<?= url('/admin/sources') ?>"><?= icon('download', 15) ?> Download sources</a>
         <a class="btn btn-ghost btn-sm" href="<?= url('/admin/settings') ?>"><?= icon('shield', 15) ?> Settings</a>
     </div>
 </section>

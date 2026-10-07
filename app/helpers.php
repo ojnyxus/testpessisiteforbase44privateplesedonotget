@@ -102,6 +102,19 @@ function human_number(int|float $value): string
     return (string)(int)$value;
 }
 
+/** File size for download listings. */
+function human_bytes(int $bytes): string
+{
+    if ($bytes >= 1048576) {
+        return round($bytes / 1048576, 1) . ' MB';
+    }
+    if ($bytes >= 1024) {
+        return round($bytes / 1024) . ' KB';
+    }
+
+    return $bytes . ' B';
+}
+
 function time_ago(string $datetime): string
 {
     $seconds = time() - strtotime($datetime);

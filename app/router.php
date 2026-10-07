@@ -28,11 +28,13 @@ function routes(): array
         ['GET',  '/admin',            'pages/admin.php'],
         ['GET',  '/admin/payments',   'pages/admin_payments.php'],
         ['GET',  '/admin/settings',   'pages/admin_settings.php'],
+        ['GET',  '/admin/sources',    'pages/admin_sources.php'],
 
         ['POST', '/pay/create',       'pages/pay_create.php'],
         ['POST', '/pay/submit',       'pages/pay_submit.php'],
         ['POST', '/pay/review',       'pages/pay_review.php'],
         ['POST', '/admin/settings',   'pages/admin_settings_save.php'],
+        ['POST', '/admin/sources',    'pages/admin_sources_save.php'],
 
         ['GET',  '/api/assets',       'api/assets.php'],
         ['GET',  '/api/pay/status',   'api/pay_status.php'],
